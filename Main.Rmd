@@ -1,0 +1,96 @@
+---
+title: "R Notebook"
+output: html_notebook
+author:
+  - Treasa Bency Biju Jose t.bijujose@ieee.org
+  - Varun Chari v.chari@ieee.org
+---
+
+## Packages
+
+```{r, results = 'hide', message = FALSE, warning = FALSE}
+library(tm)
+library(stringr)
+library(ggplot2)
+library(wordcloud)
+library(sets)
+library(magrittr)
+library(stringi)
+library(dplyr)
+library(textclean)
+```
+
+## Regions
+
+```{r}
+countries <- scan("lists/countries.txt", what="", sep="\n")
+nationalities <- scan("lists/nationalities.txt", what="", sep="\n")
+extra_stopwords <- scan("lists/stopwords_scrapmaker.txt", what="", sep="\n")
+# strsplit( "[[:space:]]+")
+```
+
+## Data Cleaning
+
+Remove white space, non-english words, and some predefined "bad words"
+
+```{r}
+anthems <- read.csv("datasets/anthems.csv")[5] %>% 
+  sapply(tolower) %>%
+  removeWords(stopwords(kind = "en")) %>%
+  removePunctuation() %>%
+  removeWords(nationalities) %>%
+  removeWords(countries) %>%
+  removeWords(extra_stopwords) %>%
+  replace_non_ascii() %>%
+  sapply(trimws) %>%
+  # stringi::stri_trans_general("latin-ascii") %>%
+  VectorSource() %>%
+  Corpus() %>%
+  DocumentTermMatrix()
+```
+
+## Tally Words
+
+```{r}
+data <- anthems %>%
+  tm::weightTfIdf() %>%
+  as.matrix() %>%
+  colSums() %>%
+  sort(decreasing = TRUE) %>%
+  as.data.frame()
+
+# the data frame with nicer labels for plotting
+word_vs_count <- data %>%
+  tibble::rownames_to_column("word")
+colnames(word_vs_count) <- c("word", "count")
+
+# data %<>% tibble::column_to_rownames("word")
+```
+
+## Plot
+
+```{r}
+ggplot(head(word_vs_count), aes(x = word, y = count)) +
+  geom_bar(stat = "identity") +
+  coord_flip()
+
+wordcloud(word_vs_count$word, word_vs_count$count, random.order = FALSE, colors = brewer.pal(9, "Spectral"))
+```
+
+## K Means
+
+```{r}
+means <- kmeans(data, centers = 5, iter.max = 10)
+
+words_to_cluster <- means$cluster %>%
+  as.data.frame() %>%
+  tibble::rownames_to_column("word")
+colnames(words_to_cluster) <- c("word", "cluster")
+
+ggplot(words_to_cluster, aes(x = word, y = cluster)) +
+  # geom_dotplot() +
+  geom_bar(stat = "identity") +
+  coord_flip()
+
+groups <- group_by(words_to_cluster)
+```
