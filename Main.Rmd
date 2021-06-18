@@ -26,6 +26,7 @@ library(textclean)
 countries <- scan("lists/countries.txt", what="", sep="\n")
 nationalities <- scan("lists/nationalities.txt", what="", sep="\n")
 extra_stopwords <- scan("lists/stopwords_scrapmaker.txt", what="", sep="\n")
+anthems_csv <- read.csv("datasets/anthems.csv")[5]
 # strsplit( "[[:space:]]+")
 ```
 
@@ -34,7 +35,7 @@ extra_stopwords <- scan("lists/stopwords_scrapmaker.txt", what="", sep="\n")
 Remove white space, non-english words, and some predefined "bad words"
 
 ```{r}
-anthems <- read.csv("datasets/anthems.csv")[5] %>% 
+anthems <- anthems_csv
   sapply(tolower) %>%
   removeWords(stopwords(kind = "en")) %>%
   removePunctuation() %>%
